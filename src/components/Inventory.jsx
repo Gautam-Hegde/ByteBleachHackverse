@@ -1,32 +1,72 @@
-import React from "react";
+import React, { useEffect, useState } from 'react'
+import { contractAddress } from "./contractConfig";
+import { contractAbi } from "./contractConfig";
+import web3modal from "web3modal";
+import axios from "axios";
+import { ethers } from 'ethers';
+import InventoryDisplay from "./InventoryDisplay"
 
-const InventoryDisplay = ({ price, name, tokenId, creator, cover, file }) => {
-    console.log(price);
-    console.log(creator.trim())
+
+const Inventory = () => {
+    const [myItems, setMyItems] = useState([]);
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        myAssets();
+    }, [loaded]);
+
+    async function myAssets() {
+        const modal = new web3modal({
+            network: "mumbai",
+            cacheProvider: true,
+        });
+        const connection = await modal.connect();
+        const provider = new ethers.providers.Web3Provider(connection);
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(
+            contractAddress,
+            contractAbi.abi,
+            signer
+        );
+        const data = await contract.fetchInventory();
+        const items = await Promise.all(
+            data.map(async (i) => {
+                const tokenUri = await contract.uri(i.tokenId.toString());
+                const meta = await axios.get(tokenUri);
+                let price = ethers.utils.formatEther(i.price);
+                let item = {
+                    price,
+                    name: meta.data.name,
+                    tokenId: i.tokenId.toNumber(),
+                    creator: i.creator,
+                    supplyL: i.supplyleft.toNumber(),
+                    cover: meta.data.coverImageURI,
+                    file: meta.data.contentURI,
+                };
+
+                return item;
+            })
+        );
+        setMyItems(items);
+        setLoaded(true);
+    }
 
     return (
         <div>
-            <div className=" font-Gothic   mt-12 ml-12 ">
-                <div className=" h-max w-96 bg-heroColor  rounded-xl p-8 border border-black hover:scale-110 transition-border duration-700">
-                    <div className=" border-b border-black ">
-                        <img src={cover} alt="" className=" object-contain max-w-full max-h-full  border-b border-black pb-4" />
-                    </div>
-                    <div className=" text-xl mt-4">
-                        {name}
-                    </div>
-                    <div className=" mt-4 flex justify-between">
-                        <p>Price</p>
-                        <p>Creator</p>
-                    </div>
-                    <div className=" mt-3 flex justify-between">
-                        <p>{price}</p>
-                        <p>{creator}</p>
-                    </div>
+            {myItems.map((item) => (
+                <div key={item.tokenId}>
+                    <InventoryDisplay
+                        price={item.price}
+                        name={item.name}
+                        tokenId={item.tokenId}
+                        creator={item.creator}
+                        cover={item.cover}
+                        file={item.file}
+                    />
                 </div>
-
-            </div>
+            ))}
         </div>
     )
 }
 
-export default InventoryDisplay;
+export default Inventory
