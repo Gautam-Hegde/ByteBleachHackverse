@@ -1,4 +1,4 @@
-export const contractAddress = `0x2FfFf386507EA2420bc293Cd2A7121e7C44d8526`;
+export const contractAddress = `0xBd3523563372E3D2Aa72c22c39bcF23E54d6De59`;
 export const contractAbi = {
   _format: "hh-sol-artifact-1",
   contractName: "Bleach",
